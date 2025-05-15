@@ -22,8 +22,9 @@ def get_query_file_url(query_name: str, scheduled_query_runs: list):
 
 
 def download_query_file(file_url: str, output_path: str, stripe_client_secret: str):
+    # TODO: handle rate limiting and retries
     headers = {"Authorization": f"Bearer {stripe_client_secret}"}
-    response = requests.get(file_url, headers=headers)
+    response = requests.get(file_url, headers=headers, timeout=300)
     with open(output_path, "w") as f:
         f.write(response.text)
 
