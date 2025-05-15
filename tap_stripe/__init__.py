@@ -16,7 +16,7 @@ import singer
 from singer import utils, Transformer, metrics
 from singer import metadata
 import backoff
-
+import shutil
 from tap_stripe.sigma_query_utils import sync_sigma_query
 
 REQUIRED_CONFIG_KEYS = ["start_date", "account_id", "client_secret"]
@@ -1271,10 +1271,17 @@ def sync():
         scheduled_query_runs = sorted(
             scheduled_query_runs, key=lambda x: x.get("created"), reverse=True
         )
+        folder_name = "stripe_files"
         for query_name in query_names:
             sync_sigma_query(
-                query_name, scheduled_query_runs, Context.config.get("client_secret")
+                query_name, scheduled_query_runs, Context.config.get("client_secret"), folder_name
             )
+
+        # delete the folder after the sync is complete
+        if os.path.exists(folder_name):
+            LOGGER.info(f"Deleting temp folder{folder_name}, Sigma queries are synced.")
+            shutil.rmtree(folder_name, ignore_errors=True)
+
 
 
 def get_date_window_size(param, default_value):
