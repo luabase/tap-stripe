@@ -12,6 +12,8 @@ setup(
     install_requires=[
         "singer-python==6.0.0",
         "stripe==5.5.0",
+        "pandas==2.2.3",
+        "genson==1.3.0"
     ],
     extras_require={
         'test': [

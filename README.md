@@ -27,9 +27,25 @@ Create a config file containing the stripe credentials, e.g.:
   "request_timeout": 300,
   "lookback_window": 600,
   "event_date_window_size": 7,
-  "date_window_size": 30
+  "date_window_size": 30,
+  "sigma_queries": ["Subscription Events Item Changes"] # optional
 }
 ```
+
+### Syncing Scheduled Sigma Queries
+If you have scheduled Sigma queries that you would like to sync you can pass the names of those scheduled queries into the `sigma_queries` parameter config (array of names).
+
+* The tap will pick the most recent scheduled query run results for each query name to sync.
+* If no matching query names are found, the tap will skip that entry and continue.
+* Schemas for Sigma queries are generated automatically each time the sync is ran, no need to specify the schemas manually.
+* Primary keys are not defined for Sigma queries. Your loader should handle this. Typically this involves a full-append to the target table or you can do a full drop and replace.
+* Only full-table replication is possible for Sigma queries at this time. If you want incremental query results, you might be able to set that up in Stripe.
+
+More docs on scheduled Stripe Sigma queries and file retrieval:
+
+* https://docs.stripe.com/stripe-data/schedule-queries#schedule
+* https://docs.stripe.com/api/sigma/scheduled_queries
+* https://docs.stripe.com/api/files/retrieve
 
 ### Discovery mode
 
