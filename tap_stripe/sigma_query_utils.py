@@ -37,7 +37,7 @@ def build_schema(file_dict: list):
     return schema.get("items")
 
 
-def sync_sigma_query(query_name: str, scheduled_query_runs: list, client_secret: str):
+def sync_sigma_query(query_name: str, scheduled_query_runs: list, client_secret: str, folder_name: str = "stripe_files"):
     query_url = get_query_file_url(query_name, scheduled_query_runs)
     if not query_url:
         SIGMA_LOGGER.warning(
@@ -46,11 +46,11 @@ def sync_sigma_query(query_name: str, scheduled_query_runs: list, client_secret:
         return
 
     # download the query file
-    if not os.path.exists("stripe_files"):
-        os.makedirs("stripe_files")
+    if not os.path.exists(folder_name):
+        os.makedirs(folder_name)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     stream_name = query_name.lower().replace(" ", "_").replace("-", "_")
-    output_path = f"stripe_files/{stream_name}_{timestamp}.csv"
+    output_path = f"{folder_name}/{stream_name}_{timestamp}.csv"
     SIGMA_LOGGER.info(f"Downloading query file for {query_name} to {output_path}")
     download_query_file(query_url, output_path, client_secret)
     SIGMA_LOGGER.info(
@@ -75,3 +75,6 @@ def sync_sigma_query(query_name: str, scheduled_query_runs: list, client_secret:
         with Transformer(singer.UNIX_SECONDS_INTEGER_DATETIME_PARSING) as transformer:
             rec = transformer.transform(record, schema)
             singer.write_record(stream_name, rec)
+
+    SIGMA_LOGGER.info(f"Finished syncing {query_name}, deleting {output_path} and {folder_name}")
+    os.remove(output_path)
