@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
+import ast
 import os
 import json
 import logging
 import re
 
 from datetime import datetime, timedelta
-import pandas as pd
 import stripe
 import stripe.error
 from stripe.stripe_object import StripeObject
@@ -1266,8 +1266,8 @@ def sync():
     # add sync for sigma queries
     LOGGER.info("Checking for sigma queries to sync...")
     if Context.config.get("sigma_queries"):
-        LOGGER.info(f"Found {len(Context.config.get('sigma_queries'))} sigma queries to sync.")
         query_names = Context.config.get("sigma_queries")
+        LOGGER.info(f"Found {len(query_names)} sigma queries to sync.")
         scheduled_query_runs = stripe.sigma.ScheduledQueryRun.list().data
         # sort by created in descending order
         scheduled_query_runs = sorted(
@@ -1322,6 +1322,11 @@ def main():
     # set the config and state in prior to check the authentication in the discovery mode itself.
     Context.config = args.config
     Context.state = args.state
+    
+    # Convert sigma_queries from string to list if needed
+    if Context.config.get("sigma_queries") and isinstance(Context.config.get("sigma_queries"), str):
+        Context.config["sigma_queries"] = ast.literal_eval(Context.config.get("sigma_queries"))
+        
     configure_stripe_client()
 
     # If discover flag was passed, run discovery mode and dump output to stdout
