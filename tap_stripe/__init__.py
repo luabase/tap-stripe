@@ -1326,6 +1326,10 @@ def main():
     # Convert sigma_queries from string to list if needed
     if Context.config.get("sigma_queries") and isinstance(Context.config.get("sigma_queries"), str):
         Context.config["sigma_queries"] = ast.literal_eval(Context.config.get("sigma_queries"))
+
+    # Verify sigma_queries is a list if it exists
+    if Context.config.get("sigma_queries") and not isinstance(Context.config.get("sigma_queries"), list):
+        raise Exception("sigma_queries config parameter must be a list/array")
         
     configure_stripe_client()
 
