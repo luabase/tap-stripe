@@ -1265,6 +1265,7 @@ def sync():
 
     # add sync for sigma queries
     if Context.config.get("sigma_queries"):
+        LOGGER.info(f"Found {len(Context.config.get('sigma_queries'))} sigma queries to sync.")
         query_names = Context.config.get("sigma_queries")
         scheduled_query_runs = stripe.sigma.ScheduledQueryRun.list().data
         # sort by created in descending order
