@@ -1325,6 +1325,7 @@ def main():
     
     # Convert sigma_queries from string to list if needed
     if Context.config.get("sigma_queries") and isinstance(Context.config.get("sigma_queries"), str):
+        LOGGER.info(f"Converting sigma_queries param from string to list: {Context.config.get('sigma_queries')}")
         Context.config["sigma_queries"] = ast.literal_eval(Context.config.get("sigma_queries"))
 
     # Verify sigma_queries is a list if it exists
