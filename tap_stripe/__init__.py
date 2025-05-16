@@ -1264,6 +1264,7 @@ def sync():
                     sync_event_updates(stream_name, Context.is_sub_stream(stream_name))
 
     # add sync for sigma queries
+    LOGGER.info("Checking for sigma queries to sync...")
     if Context.config.get("sigma_queries"):
         LOGGER.info(f"Found {len(Context.config.get('sigma_queries'))} sigma queries to sync.")
         query_names = Context.config.get("sigma_queries")
@@ -1282,6 +1283,8 @@ def sync():
         if os.path.exists(folder_name):
             LOGGER.info(f"Deleting temp folder{folder_name}, Sigma queries are synced.")
             shutil.rmtree(folder_name, ignore_errors=True)
+    else:
+        LOGGER.info("No sigma queries to sync.")
 
 
 
