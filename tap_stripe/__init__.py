@@ -806,7 +806,8 @@ def paginate_invoice_line_items(object_list):
         last_item = None
         
         # Process current page
-        for item in current_list: # item is a StripeObject
+        for item in current_list:
+            # item is a StripeObject
 
             # Handle unique_id vs id transformation for older API versions
             if hasattr(item, 'unique_id') and item.unique_id:
@@ -849,7 +850,7 @@ def paginate_invoice_line_items(object_list):
                     "Encountered old ID format issue during pagination despite fix: %s. "
                     "This indicates the pagination fix may need adjustment.", str(e)
                 )
-            raise e
+            raise
 
 
 # For Cycle Detection Below: In order to reliably detect cycles with
