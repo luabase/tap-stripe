@@ -768,7 +768,7 @@ def sync_stream(stream_name, is_sub_stream=False):
     singer.write_state(Context.state)
 
 
-def get_object_list_iterator(object_list):
+def get_object_list_iterator(object_list, sub_stream_name=None):
     """
     The data of a child event may either be a list, dict,
     or None. Handle all as a list.
@@ -781,10 +781,75 @@ def get_object_list_iterator(object_list):
         # where legacy line_items may have the same id of `sub_1234abc`,
         # which breaks pagination. (see below)
         object_list._retrieve_params["limit"] = 100  # pylint:disable=protected-access
-        return object_list.auto_paging_iter()
+        
+        # For invoice line items, use custom pagination to handle old ID format issues
+        if sub_stream_name == "invoice_line_items":
+            return paginate_invoice_line_items(object_list)
+        else:
+            return object_list.auto_paging_iter()
     if isinstance(object_list, dict):
         return [object_list]
     return object_list
+
+
+def paginate_invoice_line_items(object_list):
+    """
+    Custom pagination for invoice line items to handle old ID format issues.
+    When paginating through invoice line items, we need to ensure we use the 
+    correct ID format for the starting_after parameter. May be related to the 
+    tap using an old Stripe SDK version.
+    """
+    current_list = object_list
+    
+    while True:
+        current_page_items = []
+        last_item = None
+        
+        # Process current page
+        for item in current_list: # item is a StripeObject
+
+            # Handle unique_id vs id transformation for older API versions
+            if hasattr(item, 'unique_id') and item.unique_id:
+                # Store the original id for potential use in other fields
+                original_id = item.id
+                # Use unique_id as the actual id by modifying the StripeObject directly
+                item.id = item.unique_id
+                
+                # Update related fields if needed
+                if hasattr(item, 'type') and item.type == "invoiceitem" and not hasattr(item, 'invoice_item'):
+                    item.invoice_item = original_id
+                elif hasattr(item, 'type') and item.type == "subscription" and not hasattr(item, 'subscription'):
+                    item.subscription = original_id
+            
+            current_page_items.append(item)
+            last_item = item
+            yield item
+        
+        # Check if there are more pages
+        if not hasattr(current_list, 'has_more') or not current_list.has_more or not last_item:
+            break
+            
+        # Get the correct ID to use for starting_after
+        last_item_dict = last_item.to_dict_recursive()
+        starting_after_id = last_item_dict.get("unique_id") or last_item_dict.get("id")
+        
+        # Fetch the next page with the correct starting_after parameter
+        try:
+            # Create new list object with starting_after parameter
+            retrieve_params = getattr(current_list, '_retrieve_params', {})
+            next_page = current_list.list(
+                **retrieve_params,  # pylint: disable=protected-access
+                starting_after=starting_after_id
+            )
+            current_list = next_page
+            
+        except stripe.error.InvalidRequestError as e:
+            if "Old `id` values cannot be used" in str(e):
+                LOGGER.error(
+                    "Encountered old ID format issue during pagination despite fix: %s. "
+                    "This indicates the pagination fix may need adjustment.", str(e)
+                )
+            raise e
 
 
 # For Cycle Detection Below: In order to reliably detect cycles with
@@ -871,7 +936,7 @@ def sync_sub_stream(sub_stream_name, parent_obj, updates=False):
         )
 
     with Transformer(singer.UNIX_SECONDS_INTEGER_DATETIME_PARSING) as transformer:
-        iterator = get_object_list_iterator(object_list)
+        iterator = get_object_list_iterator(object_list, sub_stream_name)
         for sub_stream_obj in iterator:
             if expected_count:
                 substream_count += 1
